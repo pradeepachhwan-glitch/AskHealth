@@ -1,0 +1,31 @@
+// Shim for Next.js global fetch (fixes TypeScript isolatedModules error)
+import "openai/shims/next";
+
+// Main imports
+import { NextRequest, NextResponse } from 'next/server'
+import OpenAI from 'openai'
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+})
+
+export async function POST(request: NextRequest) {
+  try {
+    const { prompt } = await request.json()
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: 'You are a helpful health triage AI. Always add: "This is not medical advice—consult a doctor."' },
+        { role: 'user', content: prompt },
+      ],
+    })
+
+    const answer = completion.choices[0]?.message?.content || 'No response generated.'
+
+    return NextResponse.json({ answer })
+  } catch (error) {
+    console.error('OpenAI error:', error)
+    return NextResponse.json({ error: 'AI request failed' }, { status: 500 })
+  }
+}
